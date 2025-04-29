@@ -1,7 +1,8 @@
-import { useState, useEffect, createContext, useContext } from 'react';
+import React, { useState, useEffect, createContext, useContext } from 'react';
 import { authService } from '../services/authService';
 import { useFacebookAuth } from './useFacebookAuth';
-import { User, AuthState } from '../types/auth';
+import { User, AuthState, FacebookAuthResponse } from '../types/auth';
+import type { ReactNode } from 'react';
 
 interface AuthContextType {
   user: User | null;
@@ -16,7 +17,11 @@ interface AuthContextType {
 
 export const AuthContext = createContext<AuthContextType | null>(null);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -86,7 +91,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     setError(null);
     try {
-      const facebookData = await facebookLogin();
+      const facebookData = await facebookLogin() as FacebookAuthResponse;
       if (user) {
         const updatedUser = await authService.linkFacebookAccount(user.id, facebookData);
         setUser(updatedUser);
@@ -129,11 +134,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     disconnectFacebook,
   };
 
-  return (
-    <AuthContext.Provider value={contextValue}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return React.createElement(AuthContext.Provider, { value: contextValue }, children);
 };
 
 export const useAuth = () => {
