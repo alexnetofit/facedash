@@ -1,7 +1,7 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 import { authService } from '../services/authService';
 import { useFacebookAuth } from './useFacebookAuth';
-import { User } from '../types/auth';
+import { User, AuthState } from '../types/auth';
 
 interface AuthContextType {
   user: User | null;
@@ -16,7 +16,7 @@ interface AuthContextType {
 
 export const AuthContext = createContext<AuthContextType | null>(null);
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,18 +24,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     // Verifica se há um usuário logado ao iniciar
-    const currentUser = authService.getCurrentUser();
-    if (currentUser) {
-      setUser(currentUser);
-    }
+    const checkUser = async () => {
+      try {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          setUser(JSON.parse(storedUser));
+        }
+      } catch (err) {
+        console.error('Erro ao recuperar usuário:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    checkUser();
   }, []);
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     setError(null);
     try {
-      const user = await authService.login(email, password);
-      setUser(user);
+      const authState = await authService.login(email, password);
+      setUser(authState.user);
+      localStorage.setItem('user', JSON.stringify(authState.user));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao fazer login');
       throw err;
@@ -48,8 +58,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setIsLoading(true);
     setError(null);
     try {
-      const user = await authService.register(email, password, name);
-      setUser(user);
+      const authState = await authService.register(email, password, name);
+      setUser(authState.user);
+      localStorage.setItem('user', JSON.stringify(authState.user));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao criar conta');
       throw err;
@@ -61,7 +72,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const logout = async () => {
     setIsLoading(true);
     try {
-      await authService.logout();
+      localStorage.removeItem('user');
       await facebookLogout();
       setUser(null);
     } catch (err) {
@@ -77,10 +88,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const facebookData = await facebookLogin();
       if (user) {
-        await authService.linkFacebookAccount(user.id, facebookData);
-        // Atualiza o usuário com as informações do Facebook
-        const updatedUser = await authService.getCurrentUser();
+        const updatedUser = await authService.linkFacebookAccount(user.id, facebookData);
         setUser(updatedUser);
+        localStorage.setItem('user', JSON.stringify(updatedUser));
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao conectar com Facebook');
@@ -95,11 +105,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setError(null);
     try {
       if (user) {
-        await authService.unlinkFacebookAccount(user.id);
+        const updatedUser = await authService.unlinkFacebookAccount(user.id);
         await facebookLogout();
-        // Atualiza o usuário sem as informações do Facebook
-        const updatedUser = await authService.getCurrentUser();
         setUser(updatedUser);
+        localStorage.setItem('user', JSON.stringify(updatedUser));
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao desconectar do Facebook');
