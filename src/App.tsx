@@ -6,7 +6,9 @@ import { Layout } from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import { DashboardForm } from './pages/DashboardForm';
 import Login from './pages/Login';
+import { Integrations } from './pages/Integrations';
 import { DashboardService } from './services/dashboardService';
+import { Dashboard as DashboardType } from './types/dashboard';
 
 interface Dashboard {
   id: string;
@@ -31,7 +33,7 @@ const theme = createTheme({
 const queryClient = new QueryClient();
 
 function App() {
-  const [dashboards, setDashboards] = useState<Dashboard[]>([]);
+  const [dashboards, setDashboards] = useState<DashboardType[]>([]);
 
   useEffect(() => {
     // Carregar dashboards do localStorage
@@ -56,7 +58,7 @@ function App() {
                     <Route path="/dashboard/:id" element={<Dashboard />} />
                     <Route path="/dashboard/:id/edit" element={<DashboardForm />} />
                     <Route path="/settings" element={<div>Configurações (Em breve)</div>} />
-                    <Route path="/integrations" element={<div>Integrações (Em breve)</div>} />
+                    <Route path="/integrations" element={<Integrations />} />
                   </Routes>
                 </Layout>
               }
