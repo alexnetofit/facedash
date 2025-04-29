@@ -1,66 +1,144 @@
-import React from 'react';
-import { Box, Button, Container, Typography, CircularProgress } from '@mui/material';
-import FacebookIcon from '@mui/icons-material/Facebook';
+import React, { useState } from 'react';
+import {
+  Box,
+  Paper,
+  Typography,
+  TextField,
+  Button,
+  Alert,
+  Link,
+  CircularProgress,
+} from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { useFacebookAuth } from '../hooks/useFacebookAuth';
+import { useAuth } from '../hooks/useAuth';
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login, isLoading, error } = useFacebookAuth();
+  const { login, register, error, isLoading } = useAuth();
+  const [isRegister, setIsRegister] = useState(false);
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    name: '',
+  });
 
-  const handleFacebookLogin = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
-      await login();
-      // Se o login for bem-sucedido, redireciona para o dashboard
-      navigate('/dashboard');
+      if (isRegister) {
+        await register(formData.email, formData.password, formData.name);
+      } else {
+        await login(formData.email, formData.password);
+      }
+      navigate('/');
     } catch (err) {
-      // O erro já está sendo tratado no hook
-      console.error('Erro no login:', err);
+      // Erro já está sendo tratado no hook
     }
   };
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
   return (
-    <Container maxWidth="sm">
-      <Box
+    <Box
+      sx={{
+        height: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#121212',
+      }}
+    >
+      <Paper
         sx={{
-          height: '100vh',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          gap: 4,
+          p: 4,
+          width: '100%',
+          maxWidth: 400,
+          backgroundColor: '#1e1e1e',
         }}
       >
-        <Typography variant="h3" component="h1" gutterBottom>
-          Facebook Ads Dashboard
+        <Typography variant="h5" component="h1" gutterBottom align="center">
+          {isRegister ? 'Criar Conta' : 'Login'}
         </Typography>
-        <Typography variant="body1" color="text.secondary" align="center">
-          Conecte-se com sua conta do Facebook para visualizar suas métricas de anúncios
-        </Typography>
-        
+
         {error && (
-          <Typography color="error" align="center">
+          <Alert severity="error" sx={{ mb: 2 }}>
             {error}
-          </Typography>
+          </Alert>
         )}
 
-        <Button
-          variant="contained"
-          size="large"
-          startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <FacebookIcon />}
-          onClick={handleFacebookLogin}
-          disabled={isLoading}
-          sx={{
-            backgroundColor: '#1877f2',
-            '&:hover': {
-              backgroundColor: '#166fe5',
-            },
-          }}
-        >
-          {isLoading ? 'Conectando...' : 'Conectar com Facebook'}
-        </Button>
-      </Box>
-    </Container>
+        <form onSubmit={handleSubmit}>
+          {isRegister && (
+            <TextField
+              fullWidth
+              label="Nome"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+              margin="normal"
+            />
+          )}
+
+          <TextField
+            fullWidth
+            label="Email"
+            type="email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            required
+            margin="normal"
+          />
+
+          <TextField
+            fullWidth
+            label="Senha"
+            type="password"
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
+            required
+            margin="normal"
+          />
+
+          <Button
+            type="submit"
+            fullWidth
+            variant="contained"
+            size="large"
+            sx={{ mt: 3 }}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <CircularProgress size={24} color="inherit" />
+            ) : isRegister ? (
+              'Criar Conta'
+            ) : (
+              'Entrar'
+            )}
+          </Button>
+        </form>
+
+        <Box sx={{ mt: 2, textAlign: 'center' }}>
+          <Link
+            component="button"
+            variant="body2"
+            onClick={() => setIsRegister(!isRegister)}
+            sx={{ color: 'primary.main' }}
+          >
+            {isRegister
+              ? 'Já tem uma conta? Faça login'
+              : 'Não tem uma conta? Cadastre-se'}
+          </Link>
+        </Box>
+      </Paper>
+    </Box>
   );
 };
 
