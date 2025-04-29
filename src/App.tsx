@@ -9,6 +9,7 @@ import Login from './pages/Login';
 import { Integrations } from './pages/Integrations';
 import { DashboardService } from './services/dashboardService';
 import { Dashboard as DashboardType } from './types/dashboard';
+import { AuthProvider } from './hooks/useAuth';
 
 interface Dashboard {
   id: string;
@@ -45,26 +46,28 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <Router>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route
-              path="/*"
-              element={
-                <Layout dashboards={dashboards}>
-                  <Routes>
-                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                    <Route path="/dashboard/new" element={<DashboardForm />} />
-                    <Route path="/dashboard/:id" element={<Dashboard />} />
-                    <Route path="/dashboard/:id/edit" element={<DashboardForm />} />
-                    <Route path="/settings" element={<div>Configurações (Em breve)</div>} />
-                    <Route path="/integrations" element={<Integrations />} />
-                  </Routes>
-                </Layout>
-              }
-            />
-          </Routes>
-        </Router>
+        <AuthProvider>
+          <Router>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route
+                path="/*"
+                element={
+                  <Layout dashboards={dashboards}>
+                    <Routes>
+                      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                      <Route path="/dashboard/new" element={<DashboardForm />} />
+                      <Route path="/dashboard/:id" element={<Dashboard />} />
+                      <Route path="/dashboard/:id/edit" element={<DashboardForm />} />
+                      <Route path="/settings" element={<div>Configurações (Em breve)</div>} />
+                      <Route path="/integrations" element={<Integrations />} />
+                    </Routes>
+                  </Layout>
+                }
+              />
+            </Routes>
+          </Router>
+        </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );
