@@ -10,6 +10,19 @@ interface AdMetrics {
   impressions: string;
   clicks: string;
   ctr: string;
+  activeCampaigns: number;
+  activeAccounts: number;
+  cpa: number;
+}
+
+interface LocationData {
+  region: string;
+  spend: number;
+}
+
+interface MonthlyData {
+  month: string;
+  cpa: number;
 }
 
 export const FacebookAdsService = {
@@ -33,21 +46,15 @@ export const FacebookAdsService = {
     });
   },
 
-  getAccountMetrics: (accountId: string) => {
-    const today = new Date();
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(today.getDate() - 30);
-
-    const dateFormat = (date: Date) => date.toISOString().split('T')[0];
-
+  getAccountMetrics: (accountId: string, startDate: string, endDate: string) => {
     return new Promise<AdMetrics>((resolve, reject) => {
       window.FB.api(
         `/${accountId}/insights`,
         {
-          fields: 'spend,impressions,clicks,ctr',
+          fields: 'spend,impressions,clicks,ctr,actions,cost_per_action_type',
           time_range: {
-            since: dateFormat(thirtyDaysAgo),
-            until: dateFormat(today),
+            since: startDate,
+            until: endDate,
           },
           level: 'account',
         },
@@ -63,20 +70,52 @@ export const FacebookAdsService = {
               impressions: '0',
               clicks: '0',
               ctr: '0%',
+              activeCampaigns: 0,
+              activeAccounts: 0,
+              cpa: 0,
             });
             return;
           }
 
           const metrics = response.data[0];
+          const cpa = metrics.cost_per_action_type?.[0]?.value || 0;
+
           resolve({
             spend: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
               .format(parseFloat(metrics.spend || 0)),
             impressions: new Intl.NumberFormat('pt-BR').format(parseInt(metrics.impressions || 0)),
             clicks: new Intl.NumberFormat('pt-BR').format(parseInt(metrics.clicks || 0)),
             ctr: `${parseFloat(metrics.ctr || 0).toFixed(2)}%`,
+            activeCampaigns: 4, // Exemplo fixo, substituir por dados reais
+            activeAccounts: 2, // Exemplo fixo, substituir por dados reais
+            cpa: parseFloat(cpa),
           });
         }
       );
     });
+  },
+
+  getMonthlyData: async (accountId: string): Promise<MonthlyData[]> => {
+    // Simulando dados mensais de CPA
+    return [
+      { month: 'Jan', cpa: 12.5 },
+      { month: 'Fev', cpa: 11.2 },
+      { month: 'Mar', cpa: 10.1 },
+      { month: 'Abr', cpa: 13.4 },
+      { month: 'Mai', cpa: 9.8 },
+      { month: 'Jun', cpa: 8.5 },
+    ];
+  },
+
+  getLocationData: async (accountId: string): Promise<LocationData[]> => {
+    // Simulando dados de gastos por localização
+    return [
+      { region: 'São Paulo', spend: 8500 },
+      { region: 'Rio de Janeiro', spend: 4200 },
+      { region: 'Minas Gerais', spend: 3100 },
+      { region: 'Bahia', spend: 2400 },
+      { region: 'Rio Grande do Sul', spend: 1800 },
+      { region: 'Outros', spend: 1500 },
+    ];
   },
 }; 
