@@ -96,26 +96,88 @@ export const FacebookAdsService = {
   },
 
   getMonthlyData: async (accountId: string): Promise<MonthlyData[]> => {
-    // Simulando dados mensais de CPA
-    return [
-      { month: 'Jan', cpa: 12.5 },
-      { month: 'Fev', cpa: 11.2 },
-      { month: 'Mar', cpa: 10.1 },
-      { month: 'Abr', cpa: 13.4 },
-      { month: 'Mai', cpa: 9.8 },
-      { month: 'Jun', cpa: 8.5 },
-    ];
+    return new Promise((resolve, reject) => {
+      const today = new Date();
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(today.getMonth() - 6);
+
+      window.FB.api(
+        `/${accountId}/insights`,
+        {
+          fields: 'spend,actions',
+          time_range: {
+            since: sixMonthsAgo.toISOString().split('T')[0],
+            until: today.toISOString().split('T')[0],
+          },
+          time_increment: 1,
+          level: 'account',
+        },
+        (response: any) => {
+          if (response.error) {
+            reject(new Error(response.error.message));
+            return;
+          }
+
+          const monthlyData = response.data.map((item: any) => {
+            const date = new Date(item.date_start);
+            const month = date.toLocaleString('pt-BR', { month: 'short' });
+            const actions = item.actions?.[0]?.value || 0;
+            const spend = parseFloat(item.spend || 0);
+            const cpa = actions > 0 ? spend / actions : 0;
+
+            return {
+              month,
+              cpa: parseFloat(cpa.toFixed(2)),
+            };
+          });
+
+          resolve(monthlyData);
+        }
+      );
+    });
   },
 
-  getLocationData: async (accountId: string): Promise<LocationData[]> => {
-    // Simulando dados de gastos por localização
-    return [
-      { region: 'São Paulo', spend: 8500 },
-      { region: 'Rio de Janeiro', spend: 4200 },
-      { region: 'Minas Gerais', spend: 3100 },
-      { region: 'Bahia', spend: 2400 },
-      { region: 'Rio Grande do Sul', spend: 1800 },
-      { region: 'Outros', spend: 1500 },
-    ];
+  getLocationData: async (accountId: string, startDate: string, endDate: string): Promise<LocationData[]> => {
+    return new Promise((resolve, reject) => {
+      window.FB.api(
+        `/${accountId}/insights`,
+        {
+          fields: 'spend',
+          time_range: {
+            since: startDate,
+            until: endDate,
+          },
+          breakdowns: ['region'],
+          level: 'account',
+        },
+        (response: any) => {
+          if (response.error) {
+            reject(new Error(response.error.message));
+            return;
+          }
+
+          const locationData = response.data
+            .map((item: any) => ({
+              region: item.region,
+              spend: parseFloat(item.spend || 0),
+            }))
+            .sort((a: LocationData, b: LocationData) => b.spend - a.spend);
+
+          // Agrupa regiões menores em "Outros"
+          const topRegions = locationData.slice(0, 5);
+          const otherRegions = locationData.slice(5);
+          
+          if (otherRegions.length > 0) {
+            const otherSpend = otherRegions.reduce((sum: number, item: LocationData) => sum + item.spend, 0);
+            topRegions.push({
+              region: 'Outros',
+              spend: otherSpend,
+            });
+          }
+
+          resolve(topRegions);
+        }
+      );
+    });
   },
 }; 
