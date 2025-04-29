@@ -1,5 +1,5 @@
 import { useState, useEffect, createContext, useContext } from 'react';
-import { AuthService } from '../services/authService';
+import { authService } from '../services/authService';
 import { useFacebookAuth } from './useFacebookAuth';
 import { User } from '../types/auth';
 
@@ -24,7 +24,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     // Verifica se há um usuário logado ao iniciar
-    const currentUser = AuthService.getCurrentUser();
+    const currentUser = authService.getCurrentUser();
     if (currentUser) {
       setUser(currentUser);
     }
@@ -34,7 +34,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setIsLoading(true);
     setError(null);
     try {
-      const user = await AuthService.login(email, password);
+      const user = await authService.login(email, password);
       setUser(user);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao fazer login');
@@ -48,7 +48,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setIsLoading(true);
     setError(null);
     try {
-      const user = await AuthService.register(email, password, name);
+      const user = await authService.register(email, password, name);
       setUser(user);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao criar conta');
@@ -61,7 +61,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const logout = async () => {
     setIsLoading(true);
     try {
-      await AuthService.logout();
+      await authService.logout();
       await facebookLogout();
       setUser(null);
     } catch (err) {
@@ -77,9 +77,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const facebookData = await facebookLogin();
       if (user) {
-        await AuthService.linkFacebookAccount(user.id, facebookData);
+        await authService.linkFacebookAccount(user.id, facebookData);
         // Atualiza o usuário com as informações do Facebook
-        const updatedUser = await AuthService.getCurrentUser();
+        const updatedUser = await authService.getCurrentUser();
         setUser(updatedUser);
       }
     } catch (err) {
@@ -95,10 +95,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setError(null);
     try {
       if (user) {
-        await AuthService.unlinkFacebookAccount(user.id);
+        await authService.unlinkFacebookAccount(user.id);
         await facebookLogout();
         // Atualiza o usuário sem as informações do Facebook
-        const updatedUser = await AuthService.getCurrentUser();
+        const updatedUser = await authService.getCurrentUser();
         setUser(updatedUser);
       }
     } catch (err) {
@@ -109,7 +109,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const value = {
+  const contextValue: AuthContextType = {
     user,
     isLoading,
     error,
@@ -120,7 +120,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     disconnectFacebook,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={contextValue}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = () => {
