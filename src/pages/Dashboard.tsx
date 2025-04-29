@@ -109,140 +109,101 @@ const Dashboard = () => {
 
   if (isLoading && !metrics) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <div className="flex justify-center items-center h-screen">
         <CircularProgress />
-      </Box>
+      </div>
     );
   }
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ptBR}>
-      <Box sx={{ p: 3 }}>
+      <div className="p-6">
         {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
+          <Alert severity="error" className="mb-6">
             {error}
           </Alert>
         )}
 
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-          <FormControl sx={{ minWidth: 200 }}>
-            <InputLabel>Selecione a Conta de Anúncios</InputLabel>
+        <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
+          <div className="min-w-[200px]">
             <Select
+              className="w-full bg-dark-surface"
               value={selectedAccount}
-              label="Selecione a Conta de Anúncios"
               onChange={(e) => setSelectedAccount(e.target.value)}
+              displayEmpty
             >
+              <MenuItem disabled value="">
+                Selecione a Conta de Anúncios
+              </MenuItem>
               {accounts.map((account) => (
                 <MenuItem key={account.id} value={account.id}>
                   {account.name} ({account.account_id})
                 </MenuItem>
               ))}
             </Select>
-          </FormControl>
+          </div>
 
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <div className="flex gap-4 items-center flex-wrap">
             <DatePicker
               label="Data Inicial"
               value={startDate}
               onChange={(newValue) => newValue && setStartDate(newValue)}
+              className="bg-dark-surface"
             />
             <DatePicker
               label="Data Final"
               value={endDate}
               onChange={(newValue) => newValue && setEndDate(newValue)}
+              className="bg-dark-surface"
             />
-            <Button
-              variant="outlined"
-              startIcon={<FileDownloadIcon />}
+            <button
               onClick={handleExportCSV}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white transition-colors"
             >
+              <FileDownloadIcon />
               Exportar CSV
-            </Button>
-          </Box>
-        </Box>
+            </button>
+          </div>
+        </div>
 
         {metrics && (
-          <Grid container spacing={3} sx={{ mb: 4 }}>
-            <Grid item xs={12} sm={6} md={3}>
-              <Card>
-                <CardContent>
-                  <Typography color="text.secondary" gutterBottom>
-                    Total Gasto
-                  </Typography>
-                  <Typography variant="h4" component="div">
-                    {metrics.spend}
-                  </Typography>
-                  <Typography color="success.main" sx={{ mt: 1 }}>
-                    ↑ 5.2% vs. período anterior
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Card>
-                <CardContent>
-                  <Typography color="text.secondary" gutterBottom>
-                    Campanhas Ativas
-                  </Typography>
-                  <Typography variant="h4" component="div">
-                    {metrics.activeCampaigns}
-                  </Typography>
-                  <Typography color="success.main" sx={{ mt: 1 }}>
-                    ↑ 2.5% vs. período anterior
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Card>
-                <CardContent>
-                  <Typography color="text.secondary" gutterBottom>
-                    Status das Contas
-                  </Typography>
-                  <Typography variant="h4" component="div">
-                    {metrics.activeAccounts} ativas
-                  </Typography>
-                  <Typography color="success.main" sx={{ mt: 1 }}>
-                    ↑ 1% vs. período anterior
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Card>
-                <CardContent>
-                  <Typography color="text.secondary" gutterBottom>
-                    Impressões / Cliques
-                  </Typography>
-                  <Typography variant="h4" component="div">
-                    {metrics.impressions} / {metrics.clicks}
-                  </Typography>
-                  <Typography color="success.main" sx={{ mt: 1 }}>
-                    ↑ 3.8% vs. período anterior
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="bg-dark-surface p-6 rounded-lg">
+              <h3 className="text-gray-400 mb-2">Total Gasto</h3>
+              <p className="text-3xl font-semibold">{metrics.spend}</p>
+              <p className="text-green-500 mt-2">↑ 5.2% vs. período anterior</p>
+            </div>
+            <div className="bg-dark-surface p-6 rounded-lg">
+              <h3 className="text-gray-400 mb-2">Campanhas Ativas</h3>
+              <p className="text-3xl font-semibold">{metrics.activeCampaigns}</p>
+              <p className="text-green-500 mt-2">↑ 2.5% vs. período anterior</p>
+            </div>
+            <div className="bg-dark-surface p-6 rounded-lg">
+              <h3 className="text-gray-400 mb-2">Status das Contas</h3>
+              <p className="text-3xl font-semibold">{metrics.activeAccounts} ativas</p>
+              <p className="text-green-500 mt-2">↑ 1% vs. período anterior</p>
+            </div>
+            <div className="bg-dark-surface p-6 rounded-lg">
+              <h3 className="text-gray-400 mb-2">Impressões / Cliques</h3>
+              <p className="text-3xl font-semibold">
+                {metrics.impressions} / {metrics.clicks}
+              </p>
+              <p className="text-green-500 mt-2">↑ 3.8% vs. período anterior</p>
+            </div>
+          </div>
         )}
 
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
-            <Card>
-              <CardContent>
-                <CPAChart data={monthlyData} />
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Card>
-              <CardContent>
-                <LocationChart data={locationData} />
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-      </Box>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-dark-surface p-6 rounded-lg">
+            <h2 className="text-xl font-semibold mb-4">CPA Mensal</h2>
+            <CPAChart data={monthlyData} />
+          </div>
+          <div className="bg-dark-surface p-6 rounded-lg">
+            <h2 className="text-xl font-semibold mb-4">Gastos por Localização</h2>
+            <LocationChart data={locationData} />
+          </div>
+        </div>
+      </div>
     </LocalizationProvider>
   );
 };

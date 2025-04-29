@@ -21,19 +21,25 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { login: facebookLogin, logout: facebookLogout } = useFacebookAuth();
 
   useEffect(() => {
-    // Verifica se há um usuário logado ao iniciar
     const checkUser = async () => {
       try {
         const storedUser = localStorage.getItem('user');
+        const storedToken = localStorage.getItem('fb_token');
+        
         if (storedUser) {
-          setUser(JSON.parse(storedUser));
+          const userData = JSON.parse(storedUser);
+          // Se temos um token armazenado, atualize o usuário com ele
+          if (storedToken) {
+            userData.facebookToken = storedToken;
+          }
+          setUser(userData);
         }
       } catch (err) {
         console.error('Erro ao recuperar usuário:', err);
@@ -51,6 +57,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const authState = await authService.login(email, password);
       setUser(authState.user);
       localStorage.setItem('user', JSON.stringify(authState.user));
+      // Se o usuário tem token do Facebook, armazene separadamente
+      if (authState.user.facebookToken) {
+        localStorage.setItem('fb_token', authState.user.facebookToken);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao fazer login');
       throw err;
@@ -78,6 +88,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsLoading(true);
     try {
       localStorage.removeItem('user');
+      localStorage.removeItem('fb_token');
       await facebookLogout();
       setUser(null);
     } catch (err) {
@@ -96,6 +107,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const updatedUser = await authService.linkFacebookAccount(user.id, facebookData);
         setUser(updatedUser);
         localStorage.setItem('user', JSON.stringify(updatedUser));
+        // Armazena o token do Facebook separadamente
+        if (facebookData.accessToken) {
+          localStorage.setItem('fb_token', facebookData.accessToken);
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao conectar com Facebook');
@@ -114,6 +129,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         await facebookLogout();
         setUser(updatedUser);
         localStorage.setItem('user', JSON.stringify(updatedUser));
+        localStorage.removeItem('fb_token');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao desconectar do Facebook');
