@@ -46,6 +46,22 @@ export const FacebookAdsService = {
     });
   },
 
+  getAccountsByIds: (accountIds: string[]) => {
+    // Mockup para simulação - em um app real isto seria buscado da API do Facebook
+    return new Promise<any[]>((resolve) => {
+      // Simulação de contas recuperadas
+      const mockAccounts = accountIds.map(id => ({
+        id,
+        name: `Conta ${id.substring(4, 8)}`,
+        status: 'ACTIVE',
+      }));
+      
+      setTimeout(() => {
+        resolve(mockAccounts);
+      }, 500);
+    });
+  },
+
   getAccountMetrics: (accountId: string, startDate: string, endDate: string) => {
     return new Promise<AdMetrics>((resolve, reject) => {
       window.FB.api(

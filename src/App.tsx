@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import { DashboardForm } from './pages/DashboardForm';
 import Login from './pages/Login';
 import { Integrations } from './pages/Integrations';
+import { DashboardIntegrations } from './pages/DashboardIntegrations';
 import { DashboardService } from './services/dashboardService';
 import { Dashboard as DashboardType } from './types/dashboard';
 import { AuthProvider } from './hooks/useAuth';
@@ -65,6 +66,7 @@ function App() {
                   <Route path="/dashboard/new" element={<DashboardForm />} />
                   <Route path="/dashboard/:id" element={<Dashboard />} />
                   <Route path="/dashboard/:id/edit" element={<DashboardForm />} />
+                  <Route path="/dashboard/:id/integrations" element={<DashboardIntegrations />} />
                   <Route path="/settings" element={<div>Configurações (Em breve)</div>} />
                   <Route path="/integrations" element={<Integrations />} />
                 </Route>

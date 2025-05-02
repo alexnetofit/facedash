@@ -22,6 +22,8 @@ import { FacebookAdsService } from '../services/facebookAds';
 import { CPAChart } from '../components/CPAChart';
 import { LocationChart } from '../components/LocationChart';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import SettingsIcon from '@mui/icons-material/Settings';
+import { useParams, useNavigate } from 'react-router-dom';
 
 interface AdAccount {
   id: string;
@@ -40,6 +42,8 @@ interface Metrics {
 }
 
 const Dashboard = () => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [selectedAccount, setSelectedAccount] = useState('');
   const [accounts, setAccounts] = useState<AdAccount[]>([]);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
@@ -107,6 +111,12 @@ const Dashboard = () => {
     console.log('Exportando dados...');
   };
 
+  const handleNavigateToIntegrations = () => {
+    if (id) {
+      navigate(`/dashboard/${id}/integrations`);
+    }
+  };
+
   if (isLoading && !metrics) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -162,6 +172,13 @@ const Dashboard = () => {
             >
               <FileDownloadIcon />
               Exportar CSV
+            </button>
+            <button
+              onClick={handleNavigateToIntegrations}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded text-white transition-colors"
+            >
+              <SettingsIcon />
+              Integrações
             </button>
           </div>
         </div>

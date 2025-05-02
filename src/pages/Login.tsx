@@ -8,16 +8,14 @@ import {
   Alert,
   Link,
   CircularProgress,
-  Divider,
 } from '@mui/material';
-import FacebookIcon from '@mui/icons-material/Facebook';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, register, error, isLoading, loginWithFacebook, user } = useAuth();
+  const { login, register, error, isLoading, user } = useAuth();
   const [isRegister, setIsRegister] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
@@ -41,14 +39,6 @@ const Login = () => {
       } else {
         await login(formData.email, formData.password);
       }
-    } catch (err) {
-      // Erro já está sendo tratado no hook
-    }
-  };
-
-  const handleFacebookLogin = async () => {
-    try {
-      await loginWithFacebook();
     } catch (err) {
       // Erro já está sendo tratado no hook
     }
@@ -142,19 +132,6 @@ const Login = () => {
             )}
           </Button>
         </form>
-
-        <Divider sx={{ my: 3 }}>ou</Divider>
-
-        <Button
-          fullWidth
-          variant="outlined"
-          startIcon={<FacebookIcon />}
-          onClick={handleFacebookLogin}
-          disabled={isLoading}
-          sx={{ mb: 2 }}
-        >
-          Continuar com Facebook
-        </Button>
 
         <Box sx={{ mt: 2, textAlign: 'center' }}>
           <Link
