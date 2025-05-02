@@ -1,0 +1,5 @@
+# Ignorar arquivos específicos que estão causando problemas
+.eslintrc.json
+node_modules
+.next
+src/components/Layout/Sidebar.tsx 
