@@ -31,12 +31,31 @@ class AuthService {
     return response.json();
   }
 
-  async linkFacebookAccount(token: string, facebookData: FacebookAuthResponse): Promise<User> {
+  async loginWithFacebook(facebookData: FacebookAuthResponse): Promise<AuthState> {
+    // Como não temos backend, vamos simular um login bem-sucedido
+    const mockUser: User = {
+      id: '1',
+      email: facebookData.data?.email || 'facebook-user@example.com',
+      name: facebookData.data?.name || 'Usuário Facebook',
+      facebookId: facebookData.userID,
+      facebookToken: facebookData.accessToken,
+      facebookTokenExpires: Date.now() + (facebookData.expiresIn * 1000)
+    };
+
+    const mockAuthState: AuthState = {
+      user: mockUser,
+      token: 'mock-token-' + Date.now()
+    };
+
+    return Promise.resolve(mockAuthState);
+  }
+
+  async linkFacebookAccount(userId: string, facebookData: FacebookAuthResponse): Promise<User> {
     const response = await fetch(`${this.API_URL}/auth/facebook/link`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${userId}`,
       },
       body: JSON.stringify(facebookData),
     });
@@ -48,12 +67,12 @@ class AuthService {
     return response.json();
   }
 
-  async unlinkFacebookAccount(token: string): Promise<User> {
+  async unlinkFacebookAccount(userId: string): Promise<User> {
     const response = await fetch(`${this.API_URL}/auth/facebook/unlink`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${userId}`,
       },
     });
 

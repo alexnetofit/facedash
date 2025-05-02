@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Box, CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import { DashboardForm } from './pages/DashboardForm';
@@ -10,6 +10,7 @@ import { Integrations } from './pages/Integrations';
 import { DashboardService } from './services/dashboardService';
 import { Dashboard as DashboardType } from './types/dashboard';
 import { AuthProvider } from './hooks/useAuth';
+import { PrivateRoute } from './components/PrivateRoute';
 
 interface Dashboard {
   id: string;
@@ -49,22 +50,25 @@ function App() {
         <AuthProvider>
           <Router>
             <Routes>
+              {/* Rotas públicas */}
               <Route path="/login" element={<Login />} />
-              <Route
-                path="/*"
-                element={
+              
+              {/* Rotas protegidas */}
+              <Route element={<PrivateRoute />}>
+                <Route element={
                   <Layout dashboards={dashboards}>
-                    <Routes>
-                      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                      <Route path="/dashboard/new" element={<DashboardForm />} />
-                      <Route path="/dashboard/:id" element={<Dashboard />} />
-                      <Route path="/dashboard/:id/edit" element={<DashboardForm />} />
-                      <Route path="/settings" element={<div>Configurações (Em breve)</div>} />
-                      <Route path="/integrations" element={<Integrations />} />
-                    </Routes>
+                    <Outlet />
                   </Layout>
-                }
-              />
+                }>
+                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                  <Route path="/dashboard" element={<Navigate to="/dashboard/default" replace />} />
+                  <Route path="/dashboard/new" element={<DashboardForm />} />
+                  <Route path="/dashboard/:id" element={<Dashboard />} />
+                  <Route path="/dashboard/:id/edit" element={<DashboardForm />} />
+                  <Route path="/settings" element={<div>Configurações (Em breve)</div>} />
+                  <Route path="/integrations" element={<Integrations />} />
+                </Route>
+              </Route>
             </Routes>
           </Router>
         </AuthProvider>
