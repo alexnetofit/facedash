@@ -9,7 +9,6 @@ import AccountSelect from '@/components/AccountSelect';
 
 export default function IntegracoesPage() {
   const [userId, setUserId] = useState<string | null>(null);
-  const [userName, setUserName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [facebookStatus, setFacebookStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
   const [error, setError] = useState<string | null>(null);
@@ -22,16 +21,14 @@ export default function IntegracoesPage() {
       if (session?.user) {
         setUserId(session.user.id);
         
-        // Buscar nome do usuário no Supabase
+        // Buscar informações do usuário no Supabase
         const { data: userData } = await supabase
           .from('users')
-          .select('nome, facebook_user_id, facebook_access_token')
+          .select('facebook_user_id, facebook_access_token')
           .eq('id', session.user.id)
           .single();
         
         if (userData) {
-          setUserName(userData.nome);
-          
           // Verificar se já tem conexão com Facebook
           if (userData.facebook_user_id && userData.facebook_access_token) {
             setFacebookStatus('connected');
@@ -56,7 +53,6 @@ export default function IntegracoesPage() {
   const { 
     accounts,
     loading: accountsLoading,
-    error: accountsError,
     saveAccountsFromFacebook,
     toggleAccountSelection
   } = useAccounts(userId || '');

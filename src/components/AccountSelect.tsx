@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { Switch } from '@headlessui/react';
 
 type Account = {
