@@ -13,6 +13,7 @@ interface AuthContextType {
   logout: () => void;
   connectFacebook: () => Promise<void>;
   disconnectFacebook: () => Promise<void>;
+  loginWithFacebook: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | null>(null);
@@ -55,11 +56,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setError(null);
     try {
       const authState = await authService.login(email, password);
-      setUser(authState.user);
-      localStorage.setItem('user', JSON.stringify(authState.user));
-      // Se o usuário tem token do Facebook, armazene separadamente
-      if (authState.user.facebookToken) {
-        localStorage.setItem('fb_token', authState.user.facebookToken);
+      // Verifica se authState e authState.user existem antes de usá-los
+      if (authState && authState.user) {
+        setUser(authState.user);
+        localStorage.setItem('user', JSON.stringify(authState.user));
+        // Se o usuário tem token do Facebook, armazene separadamente
+        if (authState.user.facebookToken) {
+          localStorage.setItem('fb_token', authState.user.facebookToken);
+        }
+      } else {
+        // Lança erro se o login não retornar um usuário válido
+        throw new Error('Falha ao obter dados do usuário após login.');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao fazer login');
@@ -120,6 +127,41 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
+  const loginWithFacebook = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      // 1. Tenta logar com o Facebook usando o hook específico
+      const facebookData = await facebookLogin() as FacebookAuthResponse;
+
+      // 2. Chama o serviço de autenticação para logar/registrar via Facebook no backend
+      //    -> Esta função precisa existir no seu authService!
+      const authState = await authService.loginWithFacebook(facebookData);
+
+      // Verifica se o backend retornou um usuário válido
+      if (!authState || !authState.user) {
+        throw new Error('Falha ao obter dados do usuário após login com Facebook.');
+      }
+
+      // 3. Atualiza o estado local e localStorage com o usuário validado
+      const validUser = authState.user;
+      setUser(validUser);
+      localStorage.setItem('user', JSON.stringify(validUser));
+      if (validUser.facebookToken) { // Assumindo que o backend retorna o token FB
+        localStorage.setItem('fb_token', validUser.facebookToken);
+      }
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao fazer login com Facebook');
+      // Limpa qualquer token FB que possa ter sido salvo temporariamente pelo useFacebookAuth
+      localStorage.removeItem('fb_token');
+      await facebookLogout(); // Tenta deslogar do FB SDK se o login no backend falhar
+      throw err; // Re-lança o erro para a página de login poder tratar (opcional)
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const disconnectFacebook = async () => {
     setIsLoading(true);
     setError(null);
@@ -148,6 +190,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     logout,
     connectFacebook,
     disconnectFacebook,
+    loginWithFacebook,
   };
 
   return React.createElement(AuthContext.Provider, { value: contextValue }, children);
