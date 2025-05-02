@@ -7,23 +7,17 @@ import {
   Typography,
   Select,
   MenuItem,
-  FormControl,
-  InputLabel,
   CircularProgress,
   Alert,
   Button,
+  Paper,
 } from '@mui/material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { ptBR } from 'date-fns/locale';
+import { useParams, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { FacebookAdsService } from '../services/facebookAds';
-import { CPAChart } from '../components/CPAChart';
-import { LocationChart } from '../components/LocationChart';
-import FileDownloadIcon from '@mui/icons-material/FileDownload';
-import SettingsIcon from '@mui/icons-material/Settings';
-import { useParams, useNavigate } from 'react-router-dom';
+import FacebookIcon from '@mui/icons-material/Facebook';
+import { DashboardService } from '../services/dashboardService';
+import { useFacebookAuth } from '../hooks/useFacebookAuth';
 
 interface AdAccount {
   id: string;
@@ -44,56 +38,81 @@ interface Metrics {
 const Dashboard = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { login: facebookLogin } = useFacebookAuth();
+  const [dashboard, setDashboard] = useState<any>(null);
   const [selectedAccount, setSelectedAccount] = useState('');
   const [accounts, setAccounts] = useState<AdAccount[]>([]);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [startDate, setStartDate] = useState<Date>(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
-  const [endDate, setEndDate] = useState<Date>(new Date());
-  const [monthlyData, setMonthlyData] = useState([]);
-  const [locationData, setLocationData] = useState([]);
 
-  // Carregar contas de anúncio
+  // Carregar dashboard
+  useEffect(() => {
+    const loadDashboard = () => {
+      try {
+        if (!id) return;
+        
+        const dashboardData = DashboardService.getById(id);
+        if (!dashboardData) {
+          setError('Dashboard não encontrado');
+          return;
+        }
+        
+        setDashboard(dashboardData);
+      } catch (err) {
+        setError('Erro ao carregar dashboard');
+        console.error(err);
+      }
+    };
+    
+    loadDashboard();
+  }, [id]);
+
+  // Carregar contas do Facebook
   useEffect(() => {
     const loadAccounts = async () => {
       try {
-        const accountsData = await FacebookAdsService.getAdAccounts();
-        setAccounts(accountsData);
-        if (accountsData.length > 0) {
-          setSelectedAccount(accountsData[0].id);
+        if (!dashboard) return;
+        
+        if (dashboard.accounts && dashboard.accounts.length > 0) {
+          // Já tem contas conectadas
+          const accounts = await FacebookAdsService.getAccountsByIds(dashboard.accounts);
+          setAccounts(accounts);
+          
+          if (accounts.length > 0) {
+            setSelectedAccount(accounts[0].id);
+          }
         }
+        
       } catch (err) {
-        setError('Erro ao carregar contas de anúncio');
+        setError('Erro ao carregar contas');
         console.error(err);
       } finally {
         setIsLoading(false);
       }
     };
-
+    
     loadAccounts();
-  }, []);
+  }, [dashboard]);
 
-  // Carregar métricas quando uma conta é selecionada ou datas são alteradas
+  // Carregar métricas quando uma conta é selecionada
   useEffect(() => {
-    const loadData = async () => {
+    const loadMetrics = async () => {
       if (!selectedAccount) return;
 
       setIsLoading(true);
       try {
-        const [metricsData, monthly, location] = await Promise.all([
-          FacebookAdsService.getAccountMetrics(
-            selectedAccount,
-            format(startDate, 'yyyy-MM-dd'),
-            format(endDate, 'yyyy-MM-dd')
-          ),
-          FacebookAdsService.getMonthlyData(selectedAccount),
-          FacebookAdsService.getLocationData(selectedAccount),
-        ]);
+        const today = new Date();
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(today.getDate() - 30);
+        
+        const metricsData = await FacebookAdsService.getAccountMetrics(
+          selectedAccount,
+          format(thirtyDaysAgo, 'yyyy-MM-dd'),
+          format(today, 'yyyy-MM-dd')
+        );
 
         setMetrics(metricsData);
-        setMonthlyData(monthly);
-        setLocationData(location);
         setError(null);
       } catch (err) {
         setError('Erro ao carregar métricas');
@@ -103,125 +122,158 @@ const Dashboard = () => {
       }
     };
 
-    loadData();
-  }, [selectedAccount, startDate, endDate]);
+    if (selectedAccount) {
+      loadMetrics();
+    }
+  }, [selectedAccount]);
 
-  const handleExportCSV = () => {
-    // Implementar exportação CSV
-    console.log('Exportando dados...');
-  };
-
-  const handleNavigateToIntegrations = () => {
-    if (id) {
-      navigate(`/dashboard/${id}/integrations`);
+  const handleConnectFacebook = async () => {
+    try {
+      setIsLoading(true);
+      // Login no Facebook
+      await facebookLogin();
+      
+      // Busca contas do Facebook
+      const fbAccounts = await FacebookAdsService.getAdAccounts();
+      
+      if (fbAccounts.length > 0) {
+        setAccounts(fbAccounts);
+        setSelectedAccount(fbAccounts[0].id);
+        
+        // Atualiza o dashboard com a primeira conta
+        if (dashboard) {
+          const updatedDashboard = DashboardService.update(dashboard.id, {
+            accounts: [fbAccounts[0].id]
+          });
+          setDashboard(updatedDashboard);
+        }
+      }
+      
+      setError(null);
+    } catch (err) {
+      setError('Erro ao conectar com Facebook');
+      console.error(err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  if (isLoading && !metrics) {
+  if (isLoading && !dashboard) {
     return (
-      <div className="flex justify-center items-center h-screen">
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
         <CircularProgress />
-      </div>
+      </Box>
+    );
+  }
+
+  // Se não tem conta do Facebook conectada
+  if (dashboard && (!dashboard.accounts || dashboard.accounts.length === 0)) {
+    return (
+      <Box sx={{ p: 4, maxWidth: 800, mx: 'auto' }}>
+        <Typography variant="h4" gutterBottom>
+          {dashboard.name}
+        </Typography>
+        
+        <Paper sx={{ p: 4, mt: 4, textAlign: 'center' }}>
+          <Typography variant="h6" gutterBottom>
+            Conecte uma conta do Facebook para começar
+          </Typography>
+          
+          <Typography variant="body2" sx={{ mb: 4 }}>
+            Para visualizar os dados das suas campanhas, você precisa conectar uma conta do Facebook Ads.
+          </Typography>
+          
+          <Button
+            variant="contained"
+            startIcon={<FacebookIcon />}
+            onClick={handleConnectFacebook}
+            disabled={isLoading}
+          >
+            {isLoading ? <CircularProgress size={24} /> : 'Conectar com Facebook'}
+          </Button>
+        </Paper>
+      </Box>
     );
   }
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ptBR}>
-      <div className="p-6">
-        {error && (
-          <Alert severity="error" className="mb-6">
-            {error}
-          </Alert>
-        )}
+    <Box sx={{ p: 4 }}>
+      <Typography variant="h4" gutterBottom>
+        {dashboard?.name}
+      </Typography>
 
-        <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
-          <div className="min-w-[200px]">
-            <Select
-              className="w-full bg-dark-surface"
-              value={selectedAccount}
-              onChange={(e) => setSelectedAccount(e.target.value)}
-              displayEmpty
-            >
-              <MenuItem disabled value="">
-                Selecione a Conta de Anúncios
-              </MenuItem>
-              {accounts.map((account) => (
-                <MenuItem key={account.id} value={account.id}>
-                  {account.name} ({account.account_id})
-                </MenuItem>
-              ))}
-            </Select>
-          </div>
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
 
-          <div className="flex gap-4 items-center flex-wrap">
-            <DatePicker
-              label="Data Inicial"
-              value={startDate}
-              onChange={(newValue) => newValue && setStartDate(newValue)}
-              className="bg-dark-surface"
-            />
-            <DatePicker
-              label="Data Final"
-              value={endDate}
-              onChange={(newValue) => newValue && setEndDate(newValue)}
-              className="bg-dark-surface"
-            />
-            <button
-              onClick={handleExportCSV}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white transition-colors"
-            >
-              <FileDownloadIcon />
-              Exportar CSV
-            </button>
-            <button
-              onClick={handleNavigateToIntegrations}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded text-white transition-colors"
-            >
-              <SettingsIcon />
-              Integrações
-            </button>
-          </div>
-        </div>
+      <Box sx={{ mb: 4 }}>
+        <Select
+          value={selectedAccount}
+          onChange={(e) => setSelectedAccount(e.target.value)}
+          displayEmpty
+          sx={{ minWidth: 200 }}
+        >
+          <MenuItem disabled value="">
+            Selecione a Conta de Anúncios
+          </MenuItem>
+          {accounts.map((account) => (
+            <MenuItem key={account.id} value={account.id}>
+              {account.name}
+            </MenuItem>
+          ))}
+        </Select>
+      </Box>
 
-        {metrics && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-dark-surface p-6 rounded-lg">
-              <h3 className="text-gray-400 mb-2">Total Gasto</h3>
-              <p className="text-3xl font-semibold">{metrics.spend}</p>
-              <p className="text-green-500 mt-2">↑ 5.2% vs. período anterior</p>
-            </div>
-            <div className="bg-dark-surface p-6 rounded-lg">
-              <h3 className="text-gray-400 mb-2">Campanhas Ativas</h3>
-              <p className="text-3xl font-semibold">{metrics.activeCampaigns}</p>
-              <p className="text-green-500 mt-2">↑ 2.5% vs. período anterior</p>
-            </div>
-            <div className="bg-dark-surface p-6 rounded-lg">
-              <h3 className="text-gray-400 mb-2">Status das Contas</h3>
-              <p className="text-3xl font-semibold">{metrics.activeAccounts} ativas</p>
-              <p className="text-green-500 mt-2">↑ 1% vs. período anterior</p>
-            </div>
-            <div className="bg-dark-surface p-6 rounded-lg">
-              <h3 className="text-gray-400 mb-2">Impressões / Cliques</h3>
-              <p className="text-3xl font-semibold">
-                {metrics.impressions} / {metrics.clicks}
-              </p>
-              <p className="text-green-500 mt-2">↑ 3.8% vs. período anterior</p>
-            </div>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-dark-surface p-6 rounded-lg">
-            <h2 className="text-xl font-semibold mb-4">CPA Mensal</h2>
-            <CPAChart data={monthlyData} />
-          </div>
-          <div className="bg-dark-surface p-6 rounded-lg">
-            <h2 className="text-xl font-semibold mb-4">Gastos por Localização</h2>
-            <LocationChart data={locationData} />
-          </div>
-        </div>
-      </div>
-    </LocalizationProvider>
+      {metrics && (
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={6} lg={3}>
+            <Card>
+              <CardContent>
+                <Typography color="textSecondary" gutterBottom>
+                  Total Gasto
+                </Typography>
+                <Typography variant="h5">{metrics.spend}</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          
+          <Grid item xs={12} md={6} lg={3}>
+            <Card>
+              <CardContent>
+                <Typography color="textSecondary" gutterBottom>
+                  Impressões
+                </Typography>
+                <Typography variant="h5">{metrics.impressions}</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          
+          <Grid item xs={12} md={6} lg={3}>
+            <Card>
+              <CardContent>
+                <Typography color="textSecondary" gutterBottom>
+                  Cliques
+                </Typography>
+                <Typography variant="h5">{metrics.clicks}</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          
+          <Grid item xs={12} md={6} lg={3}>
+            <Card>
+              <CardContent>
+                <Typography color="textSecondary" gutterBottom>
+                  CTR
+                </Typography>
+                <Typography variant="h5">{metrics.ctr}</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      )}
+    </Box>
   );
 };
 
