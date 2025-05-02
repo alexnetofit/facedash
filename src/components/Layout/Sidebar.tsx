@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BiBarChart } from 'react-icons/bi';
+import { RiBarChartFill } from 'react-icons/ri';
 import { MdIntegrationInstructions } from 'react-icons/md';
 import { LuLogOut } from 'react-icons/lu';
 import { useAuth } from '@/hooks/useAuth';
@@ -32,7 +32,7 @@ export default function Sidebar() {
                 isActive('/dashboard/resumo') ? 'bg-gray-800' : ''
               }`}
             >
-              <BiBarChart className="mr-3" size={20} />
+              <RiBarChartFill className="mr-3" size={20} />
               <span>Resumo</span>
             </Link>
           </li>
